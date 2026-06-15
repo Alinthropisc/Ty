@@ -5,7 +5,7 @@
 use std::ffi::CString;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use tokio::task;
 use tracing::info;
 
@@ -17,21 +17,14 @@ use crate::ffi;
 ///
 /// The actual blocking pcap wait is capped at 2 s by libty internally;
 /// we simply run it on a spawn_blocking thread so the async runtime is free.
-pub async fn ping6_alive(
-    interface: String,
-    target: String,
-    _timeout_ms: u64,
-) -> Result<bool> {
-    let iface  = CString::new(interface).context("null in interface")?;
+pub async fn ping6_alive(interface: String, target: String, _timeout_ms: u64) -> Result<bool> {
+    let iface = CString::new(interface).context("null in interface")?;
     let target = CString::new(target).context("null in target")?;
 
     task::spawn_blocking(move || -> Result<bool> {
         unsafe {
-            let src = ffi::thc_get_own_ipv6(
-                iface.as_ptr(),
-                std::ptr::null_mut(),
-                ffi::PREFER_GLOBAL,
-            );
+            let src =
+                ffi::thc_get_own_ipv6(iface.as_ptr(), std::ptr::null_mut(), ffi::PREFER_GLOBAL);
             if src.is_null() {
                 bail!("no global IPv6 on interface");
             }

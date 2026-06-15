@@ -76,12 +76,12 @@ mod flood_config_tests {
     #[test]
     fn flood_config_clone() {
         let cfg = FloodConfig {
-            interface:   "eth0".into(),
-            rate_pps:    1000,
+            interface: "eth0".into(),
+            rate_pps: 1000,
             max_packets: 500,
-            do_hop:      true,
-            do_frag:     2,
-            do_dst:      false,
+            do_hop: true,
+            do_frag: 2,
+            do_dst: false,
         };
         let cfg2 = cfg.clone();
         assert_eq!(cfg2.interface, "eth0");
@@ -94,12 +94,12 @@ mod flood_config_tests {
     #[test]
     fn rate_zero_means_unlimited() {
         let cfg = FloodConfig {
-            interface:   "lo".into(),
-            rate_pps:    0,
+            interface: "lo".into(),
+            rate_pps: 0,
             max_packets: 0,
-            do_hop:      false,
-            do_frag:     0,
-            do_dst:      false,
+            do_hop: false,
+            do_frag: 0,
+            do_dst: false,
         };
         // rate_pps == 0 means unlimited — no sleep between packets
         assert_eq!(cfg.rate_pps, 0);
@@ -113,11 +113,11 @@ mod solicitate_advertise_config_tests {
     #[test]
     fn solicitate_config_clone() {
         let cfg = SolicitateConfig {
-            interface:   "eth0".into(),
-            rate_pps:    500,
+            interface: "eth0".into(),
+            rate_pps: 500,
             max_packets: 1000,
-            target:      Some("fe80::1".into()),
-            do_alert:    true,
+            target: Some("fe80::1".into()),
+            do_alert: true,
         };
         let cfg2 = cfg.clone();
         assert_eq!(cfg2.interface, "eth0");
@@ -130,11 +130,11 @@ mod solicitate_advertise_config_tests {
     #[test]
     fn solicitate_config_no_target() {
         let cfg = SolicitateConfig {
-            interface:   "lo".into(),
-            rate_pps:    0,
+            interface: "lo".into(),
+            rate_pps: 0,
             max_packets: 0,
-            target:      None,
-            do_alert:    false,
+            target: None,
+            do_alert: false,
         };
         assert!(cfg.target.is_none());
         assert_eq!(cfg.rate_pps, 0);
@@ -143,10 +143,10 @@ mod solicitate_advertise_config_tests {
     #[test]
     fn advertise_config_clone() {
         let cfg = AdvertiseConfig {
-            interface:   "eth1".into(),
-            rate_pps:    100,
+            interface: "eth1".into(),
+            rate_pps: 100,
             max_packets: 50,
-            target:      None,
+            target: None,
         };
         let cfg2 = cfg.clone();
         assert_eq!(cfg2.interface, "eth1");
@@ -158,10 +158,10 @@ mod solicitate_advertise_config_tests {
     #[test]
     fn advertise_config_with_target() {
         let cfg = AdvertiseConfig {
-            interface:   "eth0".into(),
-            rate_pps:    200,
+            interface: "eth0".into(),
+            rate_pps: 200,
             max_packets: 0,
-            target:      Some("2001:db8::1".into()),
+            target: Some("2001:db8::1".into()),
         };
         assert_eq!(cfg.target.as_deref(), Some("2001:db8::1"));
         assert_eq!(cfg.max_packets, 0);
@@ -176,8 +176,8 @@ mod new_config_tests {
     #[test]
     fn mld_config_clone() {
         let cfg = MldConfig {
-            interface:   "eth0".into(),
-            rate_pps:    2000,
+            interface: "eth0".into(),
+            rate_pps: 2000,
             max_packets: 100,
         };
         let cfg2 = cfg.clone();
@@ -189,8 +189,8 @@ mod new_config_tests {
     #[test]
     fn dhcp6_config_clone() {
         let cfg = Dhcp6Config {
-            interface:   "eth1".into(),
-            rate_pps:    500,
+            interface: "eth1".into(),
+            rate_pps: 500,
             max_packets: 0,
         };
         let cfg2 = cfg.clone();
@@ -202,10 +202,10 @@ mod new_config_tests {
     #[test]
     fn toobig_config_clone() {
         let cfg = TooBigConfig {
-            interface:   "eth0".into(),
-            rate_pps:    100,
+            interface: "eth0".into(),
+            rate_pps: 100,
             max_packets: 50,
-            target:      "2001:db8::1".into(),
+            target: "2001:db8::1".into(),
         };
         let cfg2 = cfg.clone();
         assert_eq!(cfg2.interface, "eth0");
@@ -217,8 +217,8 @@ mod new_config_tests {
     #[test]
     fn rs_config_clone() {
         let cfg = RsConfig {
-            interface:   "lo".into(),
-            rate_pps:    0,
+            interface: "lo".into(),
+            rate_pps: 0,
             max_packets: 10,
         };
         let cfg2 = cfg.clone();
