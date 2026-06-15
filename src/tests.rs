@@ -249,31 +249,57 @@ mod ffi_constants_tests {
     use crate::ffi;
 
     #[test]
-    fn prefer_link_is_32()      { assert_eq!(ffi::PREFER_LINK,   32); }
+    fn prefer_link_is_32() {
+        assert_eq!(ffi::PREFER_LINK, 32);
+    }
     #[test]
-    fn prefer_global_is_0()     { assert_eq!(ffi::PREFER_GLOBAL,  0); }
+    fn prefer_global_is_0() {
+        assert_eq!(ffi::PREFER_GLOBAL, 0);
+    }
     #[test]
-    fn icmp6_routeradv_is_134() { assert_eq!(ffi::ICMP6_ROUTERADV,   134); }
+    fn icmp6_routeradv_is_134() {
+        assert_eq!(ffi::ICMP6_ROUTERADV, 134);
+    }
     #[test]
-    fn icmp6_routersol_is_133() { assert_eq!(ffi::ICMP6_ROUTERSOL,   133); }
+    fn icmp6_routersol_is_133() {
+        assert_eq!(ffi::ICMP6_ROUTERSOL, 133);
+    }
     #[test]
-    fn nxt_icmp6_is_58()        { assert_eq!(ffi::NXT_ICMP6,   58); }
+    fn nxt_icmp6_is_58() {
+        assert_eq!(ffi::NXT_ICMP6, 58);
+    }
     #[test]
-    fn icmp6_neighborsol_is_135() { assert_eq!(ffi::ICMP6_NEIGHBORSOL, 135); }
+    fn icmp6_neighborsol_is_135() {
+        assert_eq!(ffi::ICMP6_NEIGHBORSOL, 135);
+    }
     #[test]
-    fn icmp6_neighboradv_is_136() { assert_eq!(ffi::ICMP6_NEIGHBORADV, 136); }
+    fn icmp6_neighboradv_is_136() {
+        assert_eq!(ffi::ICMP6_NEIGHBORADV, 136);
+    }
     #[test]
-    fn icmp6_echo_request_is_128() { assert_eq!(ffi::ICMP6_ECHO_REQUEST, 128); }
+    fn icmp6_echo_request_is_128() {
+        assert_eq!(ffi::ICMP6_ECHO_REQUEST, 128);
+    }
     #[test]
-    fn icmp6_echo_reply_is_129()   { assert_eq!(ffi::ICMP6_ECHO_REPLY,   129); }
+    fn icmp6_echo_reply_is_129() {
+        assert_eq!(ffi::ICMP6_ECHO_REPLY, 129);
+    }
     #[test]
-    fn icmp6_mld2_report_is_143()  { assert_eq!(ffi::ICMP6_MLD2_REPORT,  143); }
+    fn icmp6_mld2_report_is_143() {
+        assert_eq!(ffi::ICMP6_MLD2_REPORT, 143);
+    }
     #[test]
-    fn icmp6_redirect_is_137()     { assert_eq!(ffi::ICMP6_REDIRECT,     137); }
+    fn icmp6_redirect_is_137() {
+        assert_eq!(ffi::ICMP6_REDIRECT, 137);
+    }
     #[test]
-    fn nxt_tcp_is_6()              { assert_eq!(ffi::NXT_TCP,  6); }
+    fn nxt_tcp_is_6() {
+        assert_eq!(ffi::NXT_TCP, 6);
+    }
     #[test]
-    fn nxt_udp_is_17_v2()          { assert_eq!(ffi::NXT_UDP, 17); }
+    fn nxt_udp_is_17_v2() {
+        assert_eq!(ffi::NXT_UDP, 17);
+    }
 }
 
 #[cfg(test)]
@@ -290,11 +316,11 @@ mod attack_helpers_tests {
     #[test]
     fn eui64_link_local_prefix() {
         let mac = [0x00u8, 0x18, 0xab, 0xcd, 0xef, 0x01];
-        let ip  = eui64_ll_pub(&mac);
+        let ip = eui64_ll_pub(&mac);
         assert_eq!(ip[0], 0xfe);
         assert_eq!(ip[1], 0x80);
-        assert_eq!(ip[8],  mac[0] ^ 0x02); // U/L bit flipped
-        assert_eq!(ip[9],  mac[1]);
+        assert_eq!(ip[8], mac[0] ^ 0x02); // U/L bit flipped
+        assert_eq!(ip[9], mac[1]);
         assert_eq!(ip[10], mac[2]);
         assert_eq!(ip[11], 0xff);
         assert_eq!(ip[12], 0xfe);
@@ -305,7 +331,7 @@ mod attack_helpers_tests {
     fn eui64_ul_bit_flip() {
         // U/L bit: 0x00 ^ 0x02 = 0x02
         let mac = [0x00u8, 0x18, 0, 0, 0, 0];
-        let ip  = eui64_ll_pub(&mac);
+        let ip = eui64_ll_pub(&mac);
         assert_eq!(ip[8], 0x02);
     }
 }
@@ -327,11 +353,11 @@ mod analyze_tests {
     #[test]
     fn router_observation_fields() {
         let r = RouterObservation {
-            src_ip:       "fe80::1".into(),
+            src_ip: "fe80::1".into(),
             lifetime_sec: 1800,
-            managed:      false,
-            other:        false,
-            has_prefix:   true,
+            managed: false,
+            other: false,
+            has_prefix: true,
         };
         assert_eq!(r.src_ip, "fe80::1");
         assert_eq!(r.lifetime_sec, 1800);
@@ -341,10 +367,10 @@ mod analyze_tests {
     #[test]
     fn attack_recommendation_fields() {
         let a = AttackRecommendation {
-            priority:  1,
-            attack:    "Fake SLAAC".into(),
+            priority: 1,
+            attack: "Fake SLAAC".into(),
             rationale: "No RA-Guard".into(),
-            command:   "fake-slaac -i eth0".into(),
+            command: "fake-slaac -i eth0".into(),
         };
         assert_eq!(a.priority, 1);
         assert_eq!(a.attack, "Fake SLAAC");
