@@ -1,0 +1,45 @@
+# Rust / Cargo
+/target/
+Cargo.lock
+
+# C build outputs — compiled tool binaries
+/[a-z0-9_-]*6
+/[a-z0-9_-]*6d
+/four2six
+/dnssecwalk
+/thc-ipv6-lib.o
+/contrib/host_scan
+/contrib/spoofer
+
+# Object files
+*.o
+*.a
+*.so
+
+# Generated manpages
+/*.8
+
+# IDE / editor artefacts
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+DEADJOE
+
+# Crash dumps
+core
+core.*
+
+# Claude Code session data (never commit)
+.claude/
+
+# Local environment overrides
+.env
+.env.local
+
+# Coverage reports
+lcov.info
+tarpaulin-report.html
+llvm-cov-report/
