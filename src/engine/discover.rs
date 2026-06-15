@@ -36,9 +36,13 @@ pub async fn ping6_alive(interface: String, target: String, _timeout_ms: u64) ->
             let dstmac = ffi::thc_get_mac(iface.as_ptr(), src, dst);
 
             let rc = ffi::thc_ping26(
-                iface.as_ptr(), srcmac, dstmac, src, dst,
-                16,  // payload size
-                1,   // count
+                iface.as_ptr(),
+                srcmac,
+                dstmac,
+                src,
+                dst,
+                16, // payload size
+                1,  // count
             );
             Ok(rc == 0)
         }
@@ -57,18 +61,18 @@ pub async fn alive_scan(
     timeout_ms: u64,
     stats: Arc<Stats>,
 ) -> Result<Vec<String>> {
-    use tokio::sync::Semaphore;
     use futures::future::join_all;
+    use tokio::sync::Semaphore;
 
     let sem = Arc::new(Semaphore::new(concurrency.max(1)));
     let mut handles = Vec::with_capacity(targets.len());
 
     for target in targets {
-        let iface2   = interface.clone();
-        let target2  = target.clone();
-        let sem2     = Arc::clone(&sem);
-        let stats2   = Arc::clone(&stats);
-        let to       = timeout_ms;
+        let iface2 = interface.clone();
+        let target2 = target.clone();
+        let sem2 = Arc::clone(&sem);
+        let stats2 = Arc::clone(&stats);
+        let to = timeout_ms;
 
         handles.push(tokio::spawn(async move {
             let _permit = sem2.acquire_owned().await.unwrap();

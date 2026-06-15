@@ -411,7 +411,11 @@ async fn main() -> Result<()> {
             eprintln!("Done: {} router(s) observed.", routers.len());
         }
 
-        Commands::DumpDhcp6 { interface, duration, json } => {
+        Commands::DumpDhcp6 {
+            interface,
+            duration,
+            json,
+        } => {
             eprintln!("Sniffing DHCPv6 traffic on {interface} for {duration}s...");
             let events = dump_dhcp6(interface, duration, json).await?;
             eprintln!("Done: {} DHCPv6 packet(s) observed.", events.len());
@@ -425,6 +429,10 @@ fn print_summary(stats: &Stats) {
     let (sent, errors, elapsed) = stats.snapshot();
     eprintln!(
         "Done: sent={sent} errors={errors} elapsed={elapsed:.1}s avg={:.0} pps",
-        if elapsed > 0.0 { sent as f64 / elapsed } else { 0.0 }
+        if elapsed > 0.0 {
+            sent as f64 / elapsed
+        } else {
+            0.0
+        }
     );
 }

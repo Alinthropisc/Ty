@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod stats_tests {
-    use std::sync::Arc;
     use crate::engine::stats::Stats;
+    use std::sync::Arc;
 
     #[test]
     fn new_stats_zero() {
@@ -63,7 +63,9 @@ mod stats_tests {
                 }
             }));
         }
-        for h in handles { h.await.unwrap(); }
+        for h in handles {
+            h.await.unwrap();
+        }
         let (sent, _, _) = s.snapshot();
         assert_eq!(sent, 16_000);
     }
@@ -108,7 +110,7 @@ mod flood_config_tests {
 
 #[cfg(test)]
 mod solicitate_advertise_config_tests {
-    use crate::engine::sender::{SolicitateConfig, AdvertiseConfig};
+    use crate::engine::sender::{AdvertiseConfig, SolicitateConfig};
 
     #[test]
     fn solicitate_config_clone() {
