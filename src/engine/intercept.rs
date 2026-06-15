@@ -6,13 +6,12 @@
 //! - Fake MLD Querier — become the authoritative MLD querier on link
 
 use std::ffi::CString;
-use std::net::Ipv6Addr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use tokio::task;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::engine::sender::{eui64_ll_pub as eui64_link_local, rand_fake_mac_pub as rand_fake_mac};
 use crate::engine::stats::Stats;
@@ -61,9 +60,8 @@ pub async fn dad_dos(cfg: DadDosConfig, stats: Arc<Stats>) -> Result<()> {
         }
 
         loop {
-            if let Some(dl) = deadline {
-                if Instant::now() >= dl { break; }
-            }
+            if let Some(dl) = deadline
+                && Instant::now() >= dl { break; }
 
             let n = unsafe {
                 ffi::ty_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut())
@@ -179,9 +177,8 @@ pub async fn parasite6(cfg: ParasiteConfig, stats: Arc<Stats>) -> Result<()> {
         }
 
         loop {
-            if let Some(dl) = deadline {
-                if Instant::now() >= dl { break; }
-            }
+            if let Some(dl) = deadline
+                && Instant::now() >= dl { break; }
 
             let n = unsafe {
                 ffi::ty_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut())

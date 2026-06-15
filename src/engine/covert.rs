@@ -103,11 +103,10 @@ pub async fn covert_send(cfg: CovertSendConfig, stats: Arc<Stats>) -> Result<()>
         ffi::ty_get_mac(iface.as_ptr(), src, dst_raw as *mut u8) as usize
     };
 
-    let sleep_dur = if cfg.rate_pps > 0 {
-        Duration::from_micros(1_000_000 / cfg.rate_pps)
-    } else {
-        Duration::ZERO
-    };
+    let sleep_dur = 1_000_000u64
+        .checked_div(cfg.rate_pps)
+        .map(Duration::from_micros)
+        .unwrap_or(Duration::ZERO);
 
     let cap  = cfg.channel.capacity_bytes();
     let msg  = cfg.message.as_bytes().to_vec();
@@ -289,6 +288,7 @@ fn send_covert_pkt(
 #[derive(Clone, Debug)]
 pub struct CovertRecvConfig {
     pub interface:    String,
+    #[allow(dead_code)]  // reserved for future BPF source-filter support
     pub source:       Option<String>,
     pub channel:      CovertChannel,
     pub duration_secs: u64,

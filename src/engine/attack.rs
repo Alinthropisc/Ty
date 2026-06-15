@@ -9,11 +9,9 @@
 use std::ffi::CString;
 use std::net::Ipv6Addr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use tokio::task;
-use tracing::warn;
 
 use crate::engine::sender::{flood_loop_pub as flood_loop, rand_fake_mac_pub as rand_fake_mac, eui64_ll_pub as eui64_link_local};
 use crate::engine::stats::Stats;
