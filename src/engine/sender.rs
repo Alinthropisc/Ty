@@ -77,11 +77,10 @@ pub async fn flood_router(cfg: FloodConfig, stats: Arc<Stats>) -> Result<()> {
         (dst as usize, dstmac as usize, ip6 as usize, mac6 as usize)
     };
 
-    let sleep_dur = if cfg.rate_pps > 0 {
-        Duration::from_micros(1_000_000 / cfg.rate_pps)
-    } else {
-        Duration::ZERO
-    };
+    let sleep_dur = 1_000_000u64
+        .checked_div(cfg.rate_pps)
+        .map(Duration::from_micros)
+        .unwrap_or(Duration::ZERO);
 
     loop {
         let sent = stats.sent.load(std::sync::atomic::Ordering::Relaxed);
@@ -295,7 +294,7 @@ fn send_one_ns(
     let mut ns_buf = [0u8; 24];
     if let Some(t) = target_raw {
         let tp = t as *const u8;
-        for i in 0..16 { ns_buf[i] = unsafe { *tp.add(i) }; }
+        unsafe { std::ptr::copy_nonoverlapping(tp, ns_buf.as_mut_ptr(), 16); }
     } else {
         ns_buf[..16].copy_from_slice(&src_ip);
     }
@@ -313,11 +312,11 @@ fn send_one_ns(
         );
         if pkt.is_null() { bail!("thc_create_ipv6_extended failed"); }
 
-        if cfg.do_alert {
-            if ffi::thc_add_hdr_hopbyhop(pkt, &mut pkt_len, alert_buf.as_mut_ptr(), 6) < 0 {
-                ffi::thc_destroy_packet(pkt);
-                bail!("thc_add_hdr_hopbyhop failed");
-            }
+        if cfg.do_alert
+            && ffi::thc_add_hdr_hopbyhop(pkt, &mut pkt_len, alert_buf.as_mut_ptr(), 6) < 0
+        {
+            ffi::thc_destroy_packet(pkt);
+            bail!("thc_add_hdr_hopbyhop failed");
         }
 
         if ffi::thc_add_icmp6(
@@ -418,7 +417,7 @@ fn send_one_na(
     let mut na_buf = [0u8; 24];
     if let Some(t) = target_raw {
         let tp = t as *const u8;
-        for i in 0..16 { na_buf[i] = unsafe { *tp.add(i) }; }
+        unsafe { std::ptr::copy_nonoverlapping(tp, na_buf.as_mut_ptr(), 16); }
     } else {
         na_buf[..16].copy_from_slice(&src_ip);
     }
@@ -900,7 +899,10 @@ fn send_one_rs(
 // ── private helpers ───────────────────────────────────────────────────────────
 
 fn rate_to_sleep(rate_pps: u64) -> Duration {
-    if rate_pps > 0 { Duration::from_micros(1_000_000 / rate_pps) } else { Duration::ZERO }
+    1_000_000u64
+        .checked_div(rate_pps)
+        .map(Duration::from_micros)
+        .unwrap_or(Duration::ZERO)
 }
 
 async fn sleep_rate(d: Duration) {
