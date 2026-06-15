@@ -494,11 +494,7 @@ typedef struct {
 } ty_rsa_hdr;
 
 typedef struct {
-#ifdef TY_USE_OPENSSL_3_API
-  EVP_PKEY *pkey;
-#else
-  RSA *rsa;
-#endif
+  RSA *rsa;  /* deprecated in OpenSSL 3 but still present; EVP migration is separate */
   int len;
 } ty_key_t;
 
