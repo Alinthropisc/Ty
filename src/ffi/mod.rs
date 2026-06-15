@@ -46,9 +46,11 @@ unsafe extern "C" {
         buflen: c_int,
     ) -> c_int;
 
-    pub fn thc_add_hdr_oneshotfragment(
+    pub fn thc_add_hdr_fragment(
         pkt: *mut c_uchar,
         pkt_len: *mut c_int,
+        offset: c_int,
+        more_frags: c_int,
         id: c_uint,
     ) -> c_int;
 

@@ -5,7 +5,7 @@ edition = "2024"
 description = "THC IPv6 Attack Toolkit — revived and extended with Rust async engine"
 license = "AGPL-3.0"
 authors = ["van Hauser / THC <vh@thc.org>", "ty contributors"]
-repository = "https://github.com/your-org/ty"
+repository = "https://github.com/Alinthropisc/Ty"
 keywords = ["ipv6", "network", "security", "pentest"]
 categories = ["command-line-utilities", "network-programming"]
 

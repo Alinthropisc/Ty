@@ -61,5 +61,5 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libpcap-dev libssl-dev libnetfilter-queue-dev build-essential
 
-      - name: Build C tools
-        run: make all
+      - name: Build C tools (binaries only, no manpage generation)
+        run: make c-tools

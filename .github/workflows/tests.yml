@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-cargo-test-
 
       - name: Run unit tests (offline, no network, no C calls)
-        run: cargo test --lib -- --test-threads=4
+        run: cargo test --bin ty -- --test-threads=4
 
   coverage:
     name: Coverage (llvm-cov)
@@ -64,7 +64,7 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Generate coverage
-        run: cargo llvm-cov --lib --lcov --output-path lcov.info
+        run: cargo llvm-cov --bin ty --lcov --output-path lcov.info
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

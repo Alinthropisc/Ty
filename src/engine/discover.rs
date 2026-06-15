@@ -78,7 +78,7 @@ pub async fn alive_scan(
         let to       = timeout_ms;
 
         handles.push(tokio::spawn(async move {
-            let _permit = sem2.acquire_owned().await;
+            let _permit = sem2.acquire_owned().await.unwrap();
             match ping6_alive(iface2, target2.clone(), to).await {
                 Ok(true) => {
                     stats2.inc_sent();

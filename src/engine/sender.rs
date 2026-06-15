@@ -177,9 +177,10 @@ fn send_one_ra(
         }
 
         for i in 0..cfg.do_frag {
-            if ffi::thc_add_hdr_oneshotfragment(pkt, &mut pkt_len, i) < 0 {
+            let more = if i + 1 < cfg.do_frag { 1 } else { 0 };
+            if ffi::thc_add_hdr_fragment(pkt, &mut pkt_len, 0, more, i) < 0 {
                 ffi::thc_destroy_packet(pkt);
-                bail!("thc_add_hdr_oneshotfragment failed");
+                bail!("thc_add_hdr_fragment failed");
             }
         }
 
@@ -868,7 +869,7 @@ fn send_one_rs(
     // RS body: 4 reserved bytes, then Source Link-Layer Address option.
     let mut rs_buf = [0u8; 10];
     // bytes 0-3: reserved (zero)
-    rs_buf[4] = 1; rs_buf[5] = 1; // opt type=1 (SLLA), len=1 (8 bytes)
+    // opt type=1 (SLLA), len=1 (8 bytes), then first 4 bytes of MAC
     rs_buf[4..10].copy_from_slice(&[1, 1, fake_mac[0], fake_mac[1], fake_mac[2], fake_mac[3]]);
 
     unsafe {

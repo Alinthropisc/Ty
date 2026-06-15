@@ -21,6 +21,12 @@ MANPAGES=$(foreach p, $(PROGRAMS) $(EXTRA), $(p).8)
 
 all:	$(LIBS) $(PROGRAMS) $(EXTRA) $(MANPAGES)
 
+# Build only binaries — no manpage generation (safe for CI / no raw-socket env).
+c-tools: $(LIBS) $(PROGRAMS) $(EXTRA)
+
+thc-ipv6-lib.o: libty/thc-ipv6-lib.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
 dnssecwalk:	dnssecwalk.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(STATIC) -o $@ $^ $(LDFLAGS)
 
