@@ -16,7 +16,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use tokio::task;
 
 use crate::engine::sender::{eui64_ll_pub as eui64_link_local, rand_fake_mac_pub as rand_fake_mac};
@@ -41,18 +41,18 @@ pub enum CovertChannel {
 impl CovertChannel {
     pub fn from_str(s: &str) -> Self {
         match s {
-            "dst"    | "destination" => Self::DestOpts,
-            "flow"   | "flowlabel"   => Self::FlowLabel,
-            "frag"   | "fragment"    => Self::FragmentId,
+            "dst" | "destination" => Self::DestOpts,
+            "flow" | "flowlabel" => Self::FlowLabel,
+            "frag" | "fragment" => Self::FragmentId,
             _ => Self::HopByHop,
         }
     }
 
     pub fn name(&self) -> &'static str {
         match self {
-            Self::HopByHop   => "hop-by-hop",
-            Self::DestOpts   => "dest-opts",
-            Self::FlowLabel  => "flow-label",
+            Self::HopByHop => "hop-by-hop",
+            Self::DestOpts => "dest-opts",
+            Self::FlowLabel => "flow-label",
             Self::FragmentId => "fragment-id",
         }
     }
@@ -60,9 +60,9 @@ impl CovertChannel {
     /// Bytes of payload per packet for this channel.
     pub fn capacity_bytes(&self) -> usize {
         match self {
-            Self::HopByHop   => 4,
-            Self::DestOpts   => 4,
-            Self::FlowLabel  => 2,  // 20 bits → 2 usable bytes
+            Self::HopByHop => 4,
+            Self::DestOpts => 4,
+            Self::FlowLabel => 2, // 20 bits → 2 usable bytes
             Self::FragmentId => 4,
         }
     }
@@ -72,11 +72,11 @@ impl CovertChannel {
 #[derive(Clone, Debug)]
 pub struct CovertSendConfig {
     pub interface: String,
-    pub target:    String,
-    pub message:   String,
-    pub channel:   CovertChannel,
+    pub target: String,
+    pub message: String,
+    pub channel: CovertChannel,
     /// Packets per second (slow = stealthy, fast = more throughput).
-    pub rate_pps:  u64,
+    pub rate_pps: u64,
 }
 
 /// Send a covert message over IPv6 extension headers.
@@ -93,8 +93,10 @@ pub async fn covert_send(cfg: CovertSendConfig, stats: Arc<Stats>) -> Result<()>
 
     let dst_raw: usize = {
         let cs = CString::new(cfg.target.as_str()).context("null in target")?;
-        let p  = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
-        if p.is_null() { bail!("cannot resolve target {}", cfg.target); }
+        let p = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
+        if p.is_null() {
+            bail!("cannot resolve target {}", cfg.target);
+        }
         p as usize
     };
 
@@ -108,13 +110,16 @@ pub async fn covert_send(cfg: CovertSendConfig, stats: Arc<Stats>) -> Result<()>
         .map(Duration::from_micros)
         .unwrap_or(Duration::ZERO);
 
-    let cap  = cfg.channel.capacity_bytes();
-    let msg  = cfg.message.as_bytes().to_vec();
+    let cap = cfg.channel.capacity_bytes();
+    let msg = cfg.message.as_bytes().to_vec();
     let name = cfg.channel.name();
 
     eprintln!(
         "Covert send: {} bytes via '{}' channel ({} bytes/pkt) to {} ...",
-        msg.len(), name, cap, cfg.target
+        msg.len(),
+        name,
+        cap,
+        cfg.target
     );
 
     // Packet 0: length header.
@@ -132,11 +137,9 @@ pub async fn covert_send(cfg: CovertSendConfig, stats: Arc<Stats>) -> Result<()>
         let channel = cfg.channel.clone();
         let buf2 = buf.clone();
 
-        task::spawn_blocking(move || {
-            send_covert_pkt(iface2, dst_raw, dstmac_raw, &channel, &buf2)
-        })
-        .await
-        .context("covert send blocked")??;
+        task::spawn_blocking(move || send_covert_pkt(iface2, dst_raw, dstmac_raw, &channel, &buf2))
+            .await
+            .context("covert send blocked")??;
 
         stats.inc_sent();
         if !sleep_dur.is_zero() {
@@ -150,23 +153,25 @@ pub async fn covert_send(cfg: CovertSendConfig, stats: Arc<Stats>) -> Result<()>
 }
 
 fn send_covert_pkt(
-    iface:      CString,
-    dst_raw:    usize,
+    iface: CString,
+    dst_raw: usize,
     dstmac_raw: usize,
-    channel:    &CovertChannel,
-    data:       &[u8],
+    channel: &CovertChannel,
+    data: &[u8],
 ) -> Result<()> {
-    let dst    = dst_raw    as *mut u8;
+    let dst = dst_raw as *mut u8;
     let dstmac = dstmac_raw as *mut u8;
 
     let fake_mac = rand_fake_mac();
-    let src_ip   = eui64_link_local(&fake_mac);
+    let src_ip = eui64_link_local(&fake_mac);
     let mut fake_mac = fake_mac;
-    let mut src_ip   = src_ip;
+    let mut src_ip = src_ip;
 
     // Carrier: small ICMPv6 Echo Request with random payload.
     let mut echo_body = [0u8; 8];
-    for b in &mut echo_body { *b = fastrand::u8(..); }
+    for b in &mut echo_body {
+        *b = fastrand::u8(..);
+    }
 
     unsafe {
         match channel {
@@ -174,25 +179,33 @@ fn send_covert_pkt(
                 // Encode data in PadN option within HBH or Destination header.
                 // PadN format: type=1, length=N, data[0..N].
                 let mut opt = [0u8; 6]; // type + len + 4 data bytes
-                opt[0] = 1;                        // PadN type
-                opt[1] = data.len().min(4) as u8;  // PadN length
+                opt[0] = 1; // PadN type
+                opt[1] = data.len().min(4) as u8; // PadN length
                 let n = data.len().min(4);
-                opt[2..2+n].copy_from_slice(&data[..n]);
+                opt[2..2 + n].copy_from_slice(&data[..n]);
 
                 let mut pkt_len: i32 = 0;
                 let pkt = ffi::ty_create_ipv6(
-                    iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-                    src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+                    iface.as_ptr(),
+                    ffi::PREFER_LINK,
+                    &mut pkt_len,
+                    src_ip.as_mut_ptr(),
+                    dst,
+                    64,
+                    0,
+                    0,
+                    0,
+                    0,
                 );
-                if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+                if pkt.is_null() {
+                    bail!("ty_create_ipv6 failed");
+                }
 
                 let rc_ext = match channel {
                     CovertChannel::HopByHop => {
                         ffi::ty_add_hdr_hopbyhop(pkt, &mut pkt_len, opt.as_mut_ptr(), 6)
                     }
-                    _ => {
-                        ffi::ty_add_hdr_dst(pkt, &mut pkt_len, opt.as_mut_ptr(), 6)
-                    }
+                    _ => ffi::ty_add_hdr_dst(pkt, &mut pkt_len, opt.as_mut_ptr(), 6),
                 };
                 if rc_ext < 0 {
                     ffi::ty_destroy_packet(pkt);
@@ -200,18 +213,31 @@ fn send_covert_pkt(
                 }
 
                 if ffi::ty_add_icmp6(
-                    pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-                    echo_body.as_mut_ptr(), echo_body.len() as i32, 0,
-                ) < 0 {
+                    pkt,
+                    &mut pkt_len,
+                    ffi::ICMP6_ECHO_REQUEST,
+                    0,
+                    0,
+                    echo_body.as_mut_ptr(),
+                    echo_body.len() as i32,
+                    0,
+                ) < 0
+                {
                     ffi::ty_destroy_packet(pkt);
                     bail!("ty_add_icmp6(echo) failed");
                 }
 
                 let rc = ffi::ty_send_pkt(
-                    iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len,
+                    iface.as_ptr(),
+                    fake_mac.as_mut_ptr(),
+                    dstmac,
+                    pkt,
+                    &mut pkt_len,
                 );
                 ffi::ty_destroy_packet(pkt);
-                if rc < 0 { bail!("send covert(hbh/dst) rc={rc}"); }
+                if rc < 0 {
+                    bail!("send covert(hbh/dst) rc={rc}");
+                }
             }
 
             CovertChannel::FlowLabel => {
@@ -221,24 +247,47 @@ fn send_covert_pkt(
                 // ty_create_ipv6's `label` parameter = flow label.
                 let mut pkt_len: i32 = 0;
                 let pkt = ffi::ty_create_ipv6(
-                    iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-                    src_ip.as_mut_ptr(), dst, 64, 0, flow_label as i32, 0, 0,
+                    iface.as_ptr(),
+                    ffi::PREFER_LINK,
+                    &mut pkt_len,
+                    src_ip.as_mut_ptr(),
+                    dst,
+                    64,
+                    0,
+                    flow_label as i32,
+                    0,
+                    0,
                 );
-                if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+                if pkt.is_null() {
+                    bail!("ty_create_ipv6 failed");
+                }
 
                 if ffi::ty_add_icmp6(
-                    pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-                    echo_body.as_mut_ptr(), echo_body.len() as i32, 0,
-                ) < 0 {
+                    pkt,
+                    &mut pkt_len,
+                    ffi::ICMP6_ECHO_REQUEST,
+                    0,
+                    0,
+                    echo_body.as_mut_ptr(),
+                    echo_body.len() as i32,
+                    0,
+                ) < 0
+                {
                     ffi::ty_destroy_packet(pkt);
                     bail!("ty_add_icmp6(echo/flow) failed");
                 }
 
                 let rc = ffi::ty_send_pkt(
-                    iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len,
+                    iface.as_ptr(),
+                    fake_mac.as_mut_ptr(),
+                    dstmac,
+                    pkt,
+                    &mut pkt_len,
                 );
                 ffi::ty_destroy_packet(pkt);
-                if rc < 0 { bail!("send covert(flow) rc={rc}"); }
+                if rc < 0 {
+                    bail!("send covert(flow) rc={rc}");
+                }
             }
 
             CovertChannel::FragmentId => {
@@ -252,10 +301,20 @@ fn send_covert_pkt(
 
                 let mut pkt_len: i32 = 0;
                 let pkt = ffi::ty_create_ipv6(
-                    iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-                    src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+                    iface.as_ptr(),
+                    ffi::PREFER_LINK,
+                    &mut pkt_len,
+                    src_ip.as_mut_ptr(),
+                    dst,
+                    64,
+                    0,
+                    0,
+                    0,
+                    0,
                 );
-                if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+                if pkt.is_null() {
+                    bail!("ty_create_ipv6 failed");
+                }
 
                 // Atomic fragment (M=0, offset=0) to carry the frag_id.
                 if ffi::ty_add_hdr_fragment(pkt, &mut pkt_len, 0, 0, frag_id) < 0 {
@@ -264,18 +323,31 @@ fn send_covert_pkt(
                 }
 
                 if ffi::ty_add_icmp6(
-                    pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-                    echo_body.as_mut_ptr(), echo_body.len() as i32, 0,
-                ) < 0 {
+                    pkt,
+                    &mut pkt_len,
+                    ffi::ICMP6_ECHO_REQUEST,
+                    0,
+                    0,
+                    echo_body.as_mut_ptr(),
+                    echo_body.len() as i32,
+                    0,
+                ) < 0
+                {
                     ffi::ty_destroy_packet(pkt);
                     bail!("ty_add_icmp6(echo/frag) failed");
                 }
 
                 let rc = ffi::ty_send_pkt(
-                    iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len,
+                    iface.as_ptr(),
+                    fake_mac.as_mut_ptr(),
+                    dstmac,
+                    pkt,
+                    &mut pkt_len,
                 );
                 ffi::ty_destroy_packet(pkt);
-                if rc < 0 { bail!("send covert(frag) rc={rc}"); }
+                if rc < 0 {
+                    bail!("send covert(frag) rc={rc}");
+                }
             }
         }
     }
@@ -287,10 +359,10 @@ fn send_covert_pkt(
 /// Configuration for covert channel receiver.
 #[derive(Clone, Debug)]
 pub struct CovertRecvConfig {
-    pub interface:    String,
-    #[allow(dead_code)]  // reserved for future BPF source-filter support
-    pub source:       Option<String>,
-    pub channel:      CovertChannel,
+    pub interface: String,
+    #[allow(dead_code)] // reserved for future BPF source-filter support
+    pub source: Option<String>,
+    pub channel: CovertChannel,
     pub duration_secs: u64,
 }
 

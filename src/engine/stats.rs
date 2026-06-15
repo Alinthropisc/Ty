@@ -1,22 +1,22 @@
 //! Real-time packet statistics — lock-free atomics, printed by the sender loop.
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 #[derive(Debug)]
 pub struct Stats {
-    pub sent:   AtomicU64,
+    pub sent: AtomicU64,
     pub errors: AtomicU64,
-    pub start:  Instant,
+    pub start: Instant,
 }
 
 impl Stats {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            sent:   AtomicU64::new(0),
+            sent: AtomicU64::new(0),
             errors: AtomicU64::new(0),
-            start:  Instant::now(),
+            start: Instant::now(),
         })
     }
 
@@ -29,9 +29,9 @@ impl Stats {
     }
 
     pub fn snapshot(&self) -> (u64, u64, f64) {
-        let sent   = self.sent.load(Ordering::Relaxed);
+        let sent = self.sent.load(Ordering::Relaxed);
         let errors = self.errors.load(Ordering::Relaxed);
-        let secs   = self.start.elapsed().as_secs_f64();
+        let secs = self.start.elapsed().as_secs_f64();
         (sent, errors, secs)
     }
 

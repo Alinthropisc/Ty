@@ -21,9 +21,9 @@ use tokio::task;
 /// Information about a router advertisement seen on the wire.
 #[derive(Clone, Debug)]
 pub struct RouterInfo {
-    pub src_ip:   String,
-    pub src_mac:  String,
-    pub prefix:   String,
+    pub src_ip: String,
+    pub src_mac: String,
+    pub prefix: String,
     pub lifetime: u32,
 }
 
@@ -32,8 +32,8 @@ pub struct RouterInfo {
 /// A DHCPv6 packet event captured on the wire.
 #[derive(Clone, Debug)]
 pub struct Dhcp6Event {
-    pub msg_type:       u8,
-    pub src_ip:         String,
+    pub msg_type: u8,
+    pub src_ip: String,
     pub transaction_id: String,
 }
 
@@ -51,9 +51,9 @@ pub struct Dhcp6Event {
 /// count rather than real values — a full implementation would require a C
 /// helper to extract those fields.
 pub async fn dump_routers(
-    interface:     String,
+    interface: String,
     duration_secs: u64,
-    json:          bool,
+    json: bool,
 ) -> Result<Vec<RouterInfo>> {
     // BPF filter for ICMPv6 Router Advertisements.
     let filter = "ip6 and icmp6 and ip6[40] == 134".to_string();
@@ -66,9 +66,9 @@ pub async fn dump_routers(
     let mut results = Vec::with_capacity(count as usize);
     for i in 0..count {
         let info = RouterInfo {
-            src_ip:   format!("unknown-{i}"),
-            src_mac:  "unknown".into(),
-            prefix:   "unknown".into(),
+            src_ip: format!("unknown-{i}"),
+            src_mac: "unknown".into(),
+            prefix: "unknown".into(),
             lifetime: 0,
         };
         if json {
@@ -94,9 +94,9 @@ pub async fn dump_routers(
 /// Uses the same poll-based approach as `dump_routers`.  Returns a
 /// `Vec<Dhcp6Event>` with placeholder data sized by the captured packet count.
 pub async fn dump_dhcp6(
-    interface:     String,
+    interface: String,
     duration_secs: u64,
-    json:          bool,
+    json: bool,
 ) -> Result<Vec<Dhcp6Event>> {
     let filter = "ip6 and udp and (dst port 547 or dst port 546)".to_string();
 
@@ -107,8 +107,8 @@ pub async fn dump_dhcp6(
     let mut results = Vec::with_capacity(count as usize);
     for i in 0..count {
         let event = Dhcp6Event {
-            msg_type:       0,
-            src_ip:         format!("unknown-{i}"),
+            msg_type: 0,
+            src_ip: format!("unknown-{i}"),
             transaction_id: format!("{i:06x}"),
         };
         if json {
@@ -134,18 +134,12 @@ pub async fn dump_dhcp6(
 ///
 /// Runs on a dedicated blocking OS thread via `spawn_blocking` so the tokio
 /// runtime is not blocked during the capture window.
-async fn run_pcap_loop(
-    interface:     String,
-    filter:        String,
-    duration_secs: u64,
-) -> Result<u64> {
+async fn run_pcap_loop(interface: String, filter: String, duration_secs: u64) -> Result<u64> {
     task::spawn_blocking(move || -> Result<u64> {
-        let iface_cs  = CString::new(interface).context("null in interface")?;
+        let iface_cs = CString::new(interface).context("null in interface")?;
         let filter_cs = CString::new(filter).context("null in filter")?;
 
-        let pcap = unsafe {
-            crate::ffi::ty_pcap_init(iface_cs.as_ptr(), filter_cs.as_ptr())
-        };
+        let pcap = unsafe { crate::ffi::ty_pcap_init(iface_cs.as_ptr(), filter_cs.as_ptr()) };
         if pcap.is_null() {
             anyhow::bail!("ty_pcap_init failed — check interface name and privileges");
         }
@@ -156,9 +150,8 @@ async fn run_pcap_loop(
 
         while Instant::now() < deadline {
             // Pass null callback and null opt to just drain packets and count.
-            let n = unsafe {
-                crate::ffi::ty_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut())
-            };
+            let n =
+                unsafe { crate::ffi::ty_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut()) };
             if n > 0 {
                 total += n as u64;
             }

@@ -22,21 +22,21 @@ use crate::engine::stats::Stats;
 /// stdout as each probe completes; `json` switches to JSON-lines format.
 pub async fn scan_ports(
     _interface: String,
-    target:     String,
-    ports:      Vec<u16>,
+    target: String,
+    ports: Vec<u16>,
     concurrency: usize,
-    timeout_ms:  u64,
-    stats:       Arc<Stats>,
-    json:        bool,
+    timeout_ms: u64,
+    stats: Arc<Stats>,
+    json: bool,
 ) -> Result<Vec<u16>> {
-    let sem     = Arc::new(Semaphore::new(concurrency.max(1)));
+    let sem = Arc::new(Semaphore::new(concurrency.max(1)));
     let timeout = Duration::from_millis(timeout_ms);
 
     let mut stream = futures::stream::iter(ports)
         .map(|port| {
-            let sem2    = Arc::clone(&sem);
+            let sem2 = Arc::clone(&sem);
             let target2 = target.clone();
-            let stats2  = Arc::clone(&stats);
+            let stats2 = Arc::clone(&stats);
             async move {
                 let _permit = sem2.acquire_owned().await.unwrap();
                 let addr = format!("[{target2}]:{port}");
@@ -73,12 +73,12 @@ pub async fn scan_ports(
 ///
 /// Returns addresses that responded to ICMPv6 ping6.
 pub async fn enum_addrs(
-    interface:   String,
-    prefix:      String,
+    interface: String,
+    prefix: String,
     concurrency: usize,
-    timeout_ms:  u64,
-    stats:       Arc<Stats>,
-    json:        bool,
+    timeout_ms: u64,
+    stats: Arc<Stats>,
+    json: bool,
 ) -> Result<Vec<String>> {
     let prefix = normalise_prefix(&prefix);
     let candidates = build_candidates(&prefix);
@@ -87,7 +87,7 @@ pub async fn enum_addrs(
 
     let mut stream = futures::stream::iter(candidates)
         .map(|addr| {
-            let sem2   = Arc::clone(&sem);
+            let sem2 = Arc::clone(&sem);
             let iface2 = interface.clone();
             let stats2 = Arc::clone(&stats);
             async move {
@@ -122,7 +122,7 @@ fn normalise_prefix(prefix: &str) -> String {
     let p = prefix.trim_end_matches('/').trim_end_matches(':');
     match p.split('/').next() {
         Some(s) => s.to_string(),
-        None    => p.to_string(),
+        None => p.to_string(),
     }
 }
 
@@ -142,7 +142,7 @@ fn build_candidates(prefix: &str) -> Vec<String> {
 
     // Common EUI-64 OUI patterns — 2-byte short fake OUI or real 3-byte OUI.
     const OUIS: &[&str] = &[
-        "0218",           // toolkit fake OUI
+        "0218", // toolkit fake OUI
         "f8bc12", "b083fe", // Dell
         "8086f4", "000c29", // Intel
         "001b8f", "001d46", // Cisco
