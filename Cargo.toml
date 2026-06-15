@@ -1,12 +1,12 @@
 [package]
 name = "ty"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-description = "THC IPv6 Attack Toolkit — revived and extended with Rust async engine"
+description = "ty — IPv6 Attack Toolkit 2026 | Rust async engine over C libty"
 license = "AGPL-3.0"
-authors = ["van Hauser / THC <vh@thc.org>", "ty contributors"]
+authors = ["ty contributors"]
 repository = "https://github.com/Alinthropisc/Ty"
-keywords = ["ipv6", "network", "security", "pentest"]
+keywords = ["ipv6", "network", "security", "pentest", "ndp"]
 categories = ["command-line-utilities", "network-programming"]
 
 [dependencies]

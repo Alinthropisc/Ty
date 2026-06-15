@@ -1,4 +1,9 @@
+pub mod analyze;
+pub mod attack;
+pub mod covert;
 pub mod discover;
+pub mod flood_extra;
+pub mod intercept;
 pub mod probe;
 pub mod sender;
 pub mod sniff;

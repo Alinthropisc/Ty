@@ -24,18 +24,18 @@ pub async fn ping6_alive(interface: String, target: String, _timeout_ms: u64) ->
     task::spawn_blocking(move || -> Result<bool> {
         unsafe {
             let src =
-                ffi::thc_get_own_ipv6(iface.as_ptr(), std::ptr::null_mut(), ffi::PREFER_GLOBAL);
+                ffi::ty_get_own_ipv6(iface.as_ptr(), std::ptr::null_mut(), ffi::PREFER_GLOBAL);
             if src.is_null() {
                 bail!("no global IPv6 on interface");
             }
-            let dst = ffi::thc_resolve6(target.as_ptr());
+            let dst = ffi::ty_resolve6(target.as_ptr());
             if dst.is_null() {
                 bail!("cannot resolve target");
             }
-            let srcmac = ffi::thc_get_own_mac(iface.as_ptr());
-            let dstmac = ffi::thc_get_mac(iface.as_ptr(), src, dst);
+            let srcmac = ffi::ty_get_own_mac(iface.as_ptr());
+            let dstmac = ffi::ty_get_mac(iface.as_ptr(), src, dst);
 
-            let rc = ffi::thc_ping26(
+            let rc = ffi::ty_ping6(
                 iface.as_ptr(),
                 srcmac,
                 dstmac,

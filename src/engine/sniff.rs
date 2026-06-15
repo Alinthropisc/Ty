@@ -144,10 +144,10 @@ async fn run_pcap_loop(
         let filter_cs = CString::new(filter).context("null in filter")?;
 
         let pcap = unsafe {
-            crate::ffi::thc_pcap_init(iface_cs.as_ptr(), filter_cs.as_ptr())
+            crate::ffi::ty_pcap_init(iface_cs.as_ptr(), filter_cs.as_ptr())
         };
         if pcap.is_null() {
-            anyhow::bail!("thc_pcap_init failed — check interface name and privileges");
+            anyhow::bail!("ty_pcap_init failed — check interface name and privileges");
         }
 
         let deadline = Instant::now() + Duration::from_secs(duration_secs);
@@ -157,7 +157,7 @@ async fn run_pcap_loop(
         while Instant::now() < deadline {
             // Pass null callback and null opt to just drain packets and count.
             let n = unsafe {
-                crate::ffi::thc_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut())
+                crate::ffi::ty_pcap_check(pcap, std::ptr::null(), std::ptr::null_mut())
             };
             if n > 0 {
                 total += n as u64;
@@ -165,7 +165,7 @@ async fn run_pcap_loop(
             std::thread::sleep(poll_interval);
         }
 
-        unsafe { crate::ffi::thc_pcap_close(pcap) };
+        unsafe { crate::ffi::ty_pcap_close(pcap) };
         Ok(total)
     })
     .await
