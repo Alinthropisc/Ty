@@ -7,7 +7,7 @@ HAVE_SSL=yes
 
 #CC=gcc
 #CFLAGS=-g
-CFLAGS+=-g -O3 -flto -falign-functions -falign-jumps -falign-loops -falign-labels -freorder-blocks
+CFLAGS+=-std=c2x -g -O3 -flto -falign-functions -falign-jumps -falign-loops -falign-labels -freorder-blocks -Wall -Wextra -Wno-unused-parameter -Wno-pointer-sign
 CPPFLAGS+=-Ilibty -I.
 VPATH=fake:attack:scan:net:fuzz:libty
 CFLAGS+=$(if $(HAVE_SSL),-D_HAVE_SSL,)

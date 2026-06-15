@@ -3371,7 +3371,7 @@ void thc_dump_data(unsigned char *buf, int len, char *text) {
 
 unsigned char *thc_memstr(char *haystack, char *needle, int haystack_length,
                           int needle_length) {
-  register int i;
+  int i;
 
   if (needle_length > haystack_length) return NULL;
   for (i = 0; i <= haystack_length - needle_length; i++)

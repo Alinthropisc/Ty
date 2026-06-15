@@ -282,17 +282,21 @@ fn build_recommendations(
 
 fn capture_counts(interface: String, duration_secs: u64) -> Result<(u64, u64, u64)> {
     let iface_cs = CString::new(interface).context("null in interface")?;
-    let deadline = Instant::now() + Duration::from_secs(duration_secs);
+    let start    = Instant::now();
+    let third    = Duration::from_secs(duration_secs / 3);
+    let deadline1 = start + third;
+    let deadline2 = start + third * 2;
+    let deadline3 = start + Duration::from_secs(duration_secs);
     let poll     = Duration::from_millis(50);
 
     let (mut ra, mut dhcp6, mut ns) = (0u64, 0u64, 0u64);
 
-    // Capture RAs.
+    // Capture RAs (first third of duration).
     {
         let f = CString::new("ip6 and icmp6 and ip6[40] == 134").unwrap();
         let p = unsafe { ffi::ty_pcap_init(iface_cs.as_ptr(), f.as_ptr()) };
         if !p.is_null() {
-            while Instant::now() < deadline / 3 {
+            while Instant::now() < deadline1 {
                 let n = unsafe { ffi::ty_pcap_check(p, std::ptr::null(), std::ptr::null_mut()) };
                 if n > 0 { ra += n as u64; }
                 std::thread::sleep(poll);
@@ -301,13 +305,12 @@ fn capture_counts(interface: String, duration_secs: u64) -> Result<(u64, u64, u6
         }
     }
 
-    // Capture DHCPv6.
+    // Capture DHCPv6 (second third).
     {
         let f = CString::new("ip6 and udp and (dst port 547 or dst port 546)").unwrap();
         let p = unsafe { ffi::ty_pcap_init(iface_cs.as_ptr(), f.as_ptr()) };
         if !p.is_null() {
-            let slice_end = deadline / 3 * 2;
-            while Instant::now() < slice_end {
+            while Instant::now() < deadline2 {
                 let n = unsafe { ffi::ty_pcap_check(p, std::ptr::null(), std::ptr::null_mut()) };
                 if n > 0 { dhcp6 += n as u64; }
                 std::thread::sleep(poll);
@@ -316,12 +319,12 @@ fn capture_counts(interface: String, duration_secs: u64) -> Result<(u64, u64, u6
         }
     }
 
-    // Capture NS.
+    // Capture NS (final third).
     {
         let f = CString::new("ip6 and icmp6 and ip6[40] == 135").unwrap();
         let p = unsafe { ffi::ty_pcap_init(iface_cs.as_ptr(), f.as_ptr()) };
         if !p.is_null() {
-            while Instant::now() < deadline {
+            while Instant::now() < deadline3 {
                 let n = unsafe { ffi::ty_pcap_check(p, std::ptr::null(), std::ptr::null_mut()) };
                 if n > 0 { ns += n as u64; }
                 std::thread::sleep(poll);
